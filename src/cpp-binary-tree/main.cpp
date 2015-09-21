@@ -1,26 +1,37 @@
 #include <iostream>
 #include <stdio.h>
+#include <queue>
 
 using std::cout;
 using std::endl;
 
 class Node {
 public:
-     Node() : data_(0), left_(NULL), right_(NULL) {}
-     Node(int data) : data_(data), left_(NULL), right_(NULL) {}
+
+     typedef enum State {
+          undiscovered,
+          discovered,
+          processed
+     } State_t;
+     
+     Node() : data_(0), left_(NULL), right_(NULL), state_(undiscovered) {}
+     Node(int data) : data_(data), left_(NULL), right_(NULL), state_(undiscovered) {}
 
      void set_data(int data) { data_ = data; }
      void set_left(Node *left) { left_ = left; }
      void set_right(Node *right) { right_ = right; }
-    
+     void set_state(State_t state) { state_ = state; }
+     
      int & data() { return data_; }
      Node* left() { return left_; }
      Node* right() { return right_; }
-    
+     State_t state() { return state_; }
+     
 protected:
      int data_;
      Node *left_;
      Node *right_;
+     State_t state_;
 private:
 };
 
@@ -82,8 +93,98 @@ public:
                }
           }
 
+     void reset_states(Node * n)
+          {
+               if (n == NULL) { 
+                    return;
+               }
+
+               reset_states(n->left());
+               n->set_state(Node::undiscovered);
+               reset_states(n->right());
+          }
+
+     Node * breadth_first_search(int value)
+          {
+               reset_states(root_);
+
+               if (root_ == NULL) {
+                    return NULL;
+               }
+
+               root_->set_state(Node::discovered);
+
+               std::queue<Node*> q;
+               q.push(root_);
+
+               while (q.size() > 0) {
+                    Node * n = q.front();
+                    q.pop();                                       
+                    
+                    n->set_state(Node::processed);
+
+                    printf("Node: %d\n", n->data());
+                    
+                    if (n->data() == value) {
+                         printf("\tFound Node: %d\n",  n->data());
+                         return n;
+                    }
+                    
+                    if (n->left() != NULL && n->left()->state() == Node::undiscovered) {
+                         n->left()->set_state(Node::discovered);
+                         q.push(n->left());
+                    }
+
+                    if (n->right() != NULL && n->right()->state() == Node::undiscovered) {
+                         n->right()->set_state(Node::discovered);
+                         q.push(n->right());
+                    }                    
+               }
+               
+               return NULL;
+          }
+
+     Node * depth_first_search(int value)
+          {
+               reset_states(root_);
+               return dfs(root_, value);               
+          }
+
 protected:
-     Node *root_;
+     Node *root_;     
+
+     Node * dfs(Node *n, int value)
+          {
+               if (n == NULL) {
+                    return NULL;
+               }
+               
+               n->set_state(Node::discovered);
+               n->set_state(Node::processed);
+               
+               printf("Node: %d\n", n->data());
+
+               if (n->data() == value) {
+                    return n;
+               }
+               
+               if (n->left() != NULL && n->left()->state() == Node::undiscovered) {
+                    n->left()->set_state(Node::discovered);
+                    Node * tmp = dfs(n->left(),value);
+                    if (tmp != NULL) {
+                         return tmp;
+                    }
+               }
+
+               if (n->right() != NULL && n->right()->state() == Node::undiscovered) {                    
+                    n->right()->set_state(Node::discovered);
+                    Node * tmp = dfs(n->right(),value);
+                    if (tmp != NULL) {
+                         return tmp;
+                    }
+               }
+               return NULL;
+          }
 
      void preorder_print(Node *n)
           {
@@ -101,7 +202,7 @@ protected:
                if (n == NULL) {
                     return;    
                }
-
+               
                inorder_print(n->left());
                printf("%d ", n->data());
                inorder_print(n->right());
@@ -131,10 +232,25 @@ int main(int argc, char *argv[])
      bt.add(9);
      bt.add(10);
      bt.add(20);
+     bt.add(7);
+     bt.add(3);
+     bt.add(15);
 
      bt.print(BinaryTree::preorder);
      bt.print(BinaryTree::inorder);
      bt.print(BinaryTree::postorder);
+     
+     printf("-------------------\n");
+     printf("Breadth First Search\n");
 
+     Node *n = bt.breadth_first_search(10);
+     printf("Yeah, Found Node: %d\n", n->data());
+
+     printf("-------------------\n");
+     printf("Depth First Search\n");
+     
+     n = bt.depth_first_search(15);
+     printf("Yeah, Found Node: %d\n", n->data());
+     
      return 0;
 }
